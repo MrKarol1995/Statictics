@@ -1,0 +1,37 @@
+---
+title: "Raport nr 1"
+subtitle: "Kinga Heda, Karol Cieślik"
+---
+
+```{r, warning=FALSE, include=FALSE}
+library(tidyverse)
+
+dane <- read.csv("Salary_Data.csv", na = c("Other", ""))
+```
+
+```{r}
+dane_cleaned <- dane %>% 
+  mutate(Gender = factor(Gender),
+         Education.Level = factor(Education.Level)) %>%
+  filter(!is.na(Gender),
+         !is.na(Education.Level),
+         !is.na(Years.of.Experience),
+         !is.na(Salary))
+```
+
+```{r}
+dane_cleaned %>%
+  ggplot(mapping=aes(x = Age, y = Salary)) +
+  geom_point() 
+```
+
+```{r}
+dane_cleaned %>%
+  ggplot(aes(x = Gender, y = Salary)) +
+  geom_boxplot()
+```
+
+```{r}
+
+```
+
