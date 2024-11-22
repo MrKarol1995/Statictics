@@ -13,6 +13,7 @@ df$wiek_smierci <- wiek_smierci # dodanie kolumny do dataframe
 
 head(df)
 
+
 # t-test
 df %>% group_by(Kategoria) %>% summarize(pwartość = t.test(wiek_smierci~Shake)$p.value) %>% view()
 
