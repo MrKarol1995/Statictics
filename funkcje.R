@@ -14,6 +14,8 @@ funk <- function(n){
 }
 
 
+
+
 start <- Sys.time()
 indexx <- function(v1,v2){
   bul <- which(is.na(v1) & is.na(v2))
