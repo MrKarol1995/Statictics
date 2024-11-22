@@ -1,4 +1,6 @@
 library(tidyverse)
+
+
 # Tworzenie przykładowych danych
 kategorie <- 1:100
 
