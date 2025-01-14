@@ -1,0 +1,366 @@
+---
+title: "Raport nr 2"
+subtitle: "Rozwiązanie Zadań"
+author: "Kinga Heda, Karol Cieślik"
+date: "2024-01-14"
+output:
+  pdf_document:
+    citation_package: natbib
+bibliography: references.bib
+biblio-style: unsrt
+format: pdf
+---
+** **
+# *Analiza różnicy płac w zależności od: płci, wykształcenia, lat doświadczenia w Indiach na rok 2018* 
+
+
+** **
+## *Spis treści:*
+
+-   Wprowadzenie
+-   Przedstawienie danych
+-   Opis Zmiennych
+-   Wczytanie danych
+-   Analiza danych
+-   Wykresy
+-   Podsumowanie
+-   Bibliografia
+
+** **
+# Wprowadzenie
+
+Niniejszy raport przedstawia analizę różnic w wynagrodzeniach ze względu na lata doświadczenia [@domin20] zawodowego oraz wykonywany zawód, uwzględniając dane z Głównego Urzędu Statystycznego (GUS).[@gus] W kontekście równości płci w wynagrodzeniach, szczególną uwagę poświęcono wskaźnikowi luki płacowej (GPG – Gender Pay Gap), który stanowi istotny wskaźnik monitorujący nierówności w wynagrodzeniach między kobietami, a mężczyznami.[@dor]
+
+Luka płacowa w swojej niekorygowanej formie jest definiowana jako różnica między średnimi godzinowymi zarobkami brutto mężczyzn i kobiet, wyrażona jako procent średnich godzinowych zarobków brutto mężczyzn. Wyliczana jest dla przedsiębiorstw zatrudniających co najmniej 10 pracowników. W raporcie wykorzystano ten wskaźnik jako punkt odniesienia do oceny różnic płacowych w wybranych grupach zawodowych oraz w zależności od stażu pracy.
+
+Dane te mają kluczowe znaczenie w analizie strukturalnych uwarunkowań wynagrodzeń, pozwalając zidentyfikować obszary wymagające działań w zakresie polityki równościowej i zarządzania zasobami ludzkimi.
+** **
+# Przedstawienie danych
+
+Analizie poddane zostały dane przedstawiające wysokości płac kobiet oraz mężczyzn z uwzględnieniem wieku, doświadczenia, wykształcenia oraz obejmowanego stanowiska w Indiach. Dane pochodzą z zestawu danych "Salary Data" dostępnego na platformie Kaggle, udostępnione na mocy umowy licencyjnej społeczności na przetwarzanie danych. Zestaw danych został uzyskany z wielu źródeł, w tym z ankiet, witryn z ofertami pracy i innych publicznie dostępnych źródeł. Łącznie zebrano 6704 punkty danych, co jest całkiem sporą próbą, dzięki czemu nasza analiza może być bardziej prawdziwa.
+
+** **
+
+# Opis zmiennych
+
+Dane zawierają zmienne dotyczące wynagrodzenia, płci, wieku, doświadczenia, rodzaju pracy i wykształcenia.
+
+Analizowane zmienne są przekształcone do potrzebnego nam formatu.
+
+1.)  **Płeć:** zmienna kategoryczna z wartościami "kobieta" i "mężczyzna".
+
+2.)  **Wiek:** zmienna ciągła, możliwe wartości mieszczą się w przedziale od 20 do 65 lat.
+
+3.)  **Doświadczenie:** zmienna ciągła, przyjmuje wartości z przedziału 0-34 lata.
+
+4.)  **Rodzaj pracy:** zmienna typu character, wskazująca na stanowisko lub branżę, w której dana osoba pracuje.
+
+5.)  **Wynagrodzenie:** zmienną ciągła, mieszczącą się w przedziale od 0 do 260 000 INR (rupia indyjska).
+
+6.)  **Wykształcenie:** zmienna kategoryczna, możliwe wartości to wykształcenie: średnie, inżynierskie, magisterskie i doktorskie.
+** **
+
+
+### Wczytanie danych
+
+
+
+```{r, warning=FALSE, message=FALSE, include=FALSE}
+
+#wczytanie danych
+library(tidyverse)
+library(ggthemes)
+library(ggplot2)
+library(dplyr)
+library(stats)
+
+
+```
+
+
+
+Tabela 1 przedstawia, jakie kolumny mamy wśród pobranych danych i ich oryginalne typy, natomiast w 2 tabeli te same dane po czyszczeniu. Zamieniamy tutaj danej wejściowe, na konkretne typy, aby dało się na nich operować.
+Jednocześnie usuwamy błedy i czyścimy dane, w taki sposób, abyśmy mogli wymodelować odpowiednie wykresy i następnie przeprowadzić analizę tych danych.
+
+| Nazwy kolumn        | Typy danych                 |
+|---------------------|-----------------------------|
+| Age                 | numeric with range 20-65    |
+| Gender              | character                   |
+| Education Level     | character                   |
+| Job Title           | character                   |
+| Years of Experience | numeric with range 0-34     |
+| Salary              | numeric with range 0-260000 |
+
+: Typy oryginalnych danych w poszczególnych kolumnach.
+
+| Nazwy kolumn        | Typy danych                 |
+|---------------------|-----------------------------|
+| Age                 | numeric with range 20-65    |
+| Gender              | factor with 2 levels        |
+| Education Level     | factor with 7 levels        |
+| Job Title           | character                   |
+| Years of Experience | numeric with range 0-34     |
+| Salary              | numeric with range 0-260000 |
+
+: Typy wyczyszconych danych w poszczególnych kolumnach.
+
+Wizualizację rozkładu wszystkich zmiennych przedstawiono na poniższych histogramach.
+
+
+
+Z danych możemy wyczytać, że badane osoby są raczej głodsze niz 45 lat, oraz w znacznej większosci mają mniej niż 20 lat doświadczenia pracy.
+Natomiast wartości wynagrodzeń są w miarę równo rozłożone.
+```{r}
+zadanie_1 <- function() {
+  # Parametry
+  mu_values <- seq(-1, 3, length.out = 100)
+  n <- 100  # Rozmiar próbki
+  alpha <- 0.05
+  
+  # Test z założeniem σ = 3
+  test_sigma_fixed <- function(sample, sigma = 3) {
+    z_stat <- (mean(sample) - 1) / (sigma / sqrt(length(sample)))
+    p_value <- 1 - pnorm(z_stat)
+    return(p_value < alpha)
+  }
+  
+  # Test t-Studenta
+  test_t_student <- function(sample) {
+    t_test <- t.test(sample, mu = 1, alternative = "greater")
+    return(t_test$p.value < alpha)
+  }
+  
+  # Test Wilcoxona
+  test_wilcoxon <- function(sample) {
+    w_test <- wilcox.test(sample, mu = 1, alternative = "greater")
+    return(w_test$p.value < alpha)
+  }
+  
+  # Funkcja Monte Carlo
+  monte_carlo_power <- function(test_func, mu_values, n, num_simulations = 1000) {
+    power <- numeric(length(mu_values))
+    for (i in seq_along(mu_values)) {
+      mu <- mu_values[i]
+      rejections <- sum(sapply(1:num_simulations, function(x) {
+        sample <- rnorm(n, mean = mu, sd = 3)
+        test_func(sample)
+      }))
+      power[i] <- rejections / num_simulations
+    }
+    return(power)
+  }
+  
+  # Obliczanie mocy dla trzech testów
+  power_sigma <- monte_carlo_power(test_sigma_fixed, mu_values, n)
+  power_t <- monte_carlo_power(test_t_student, mu_values, n)
+  power_wilcoxon <- monte_carlo_power(test_wilcoxon, mu_values, n)
+  
+  # Wykres mocy
+  df <- data.frame(
+    mu = rep(mu_values, 3),
+    power = c(power_sigma, power_t, power_wilcoxon),
+    test = factor(rep(c("Test z", "Test t", "Test Wilcoxona"), each = length(mu_values)))
+  )
+  
+  ggplot(df, aes(x = mu, y = power, color = test)) +
+    geom_line(size = 1) +
+    labs(title = "Zadanie 1: Moc testów",
+         x = "μ",
+         y = "Moc testu") +
+    theme_minimal()
+}
+
+# Uruchomienie zadania 1
+zadanie_1()
+```
+
+** **
+
+# Analiza danych
+
+## Wstęp do analizy danych statystycznych dotyczących
+Indie, jako jeden z najszybciej rozwijających się rynków pracy na świecie, stanowią interesujący obszar badań. Pomimo postępów w zakresie równouprawnienia płci, dane sugerują, że istnieją znaczące różnice w wynagrodzeniach pomiędzy kobietami a mężczyznami, które mogą wynikać zarówno z uprzedzeń systemowych, jak i nierównomiernego dostępu do awansów zawodowych. Dodatkowo, wynagrodzenie w wielu przypadkach silnie koreluje z poziomem doświadczenia zawodowego, co może wskazywać na przewagę osób o większym stażu pracy, szczególnie w sektorach wymagających wysokich kwalifikacji.
+
+Przewidujemy, że wynagrodzenie rośnie proporcjonalnie do lat doświadczenia zawodowego. Możliwe jednak, że dynamika wzrostu płac maleje po osiągnięciu określonego poziomu stażu pracy.
+
+
+
+Pierwszym krokiem jest analiza wynagrodzeń w zależności od płci. W tym celu tworzymy wykres typu boxplot oraz wykres gęstości, z których możemy odczytać podstawowe statystyki dotyczące wysokości płac kobiet i mężczyzn.
+
+```{r, echo=FALSE, warning = FALSE, message=FALSE}
+zadanie_2 <- function() {
+  # Parametry
+  mu_values <- seq(-1, 3, length.out = 100)
+  n <- 100
+  alpha <- 0.05
+  
+  # Test z założeniem σ = 6
+  test_sigma_fixed <- function(sample, sigma = 6) {
+    z_stat <- (mean(sample) - 1) / (sigma / sqrt(length(sample)))
+    p_value <- 1 - pnorm(z_stat)
+    return(p_value < alpha)
+  }
+  
+  # Test t-Studenta
+  test_t_student <- function(sample) {
+    t_test <- t.test(sample, mu = 1, alternative = "greater")
+    return(t_test$p.value < alpha)
+  }
+  
+  # Test Wilcoxona
+  test_wilcoxon <- function(sample) {
+    w_test <- wilcox.test(sample, mu = 1, alternative = "greater")
+    return(w_test$p.value < alpha)
+  }
+  
+  # Funkcja Monte Carlo
+  monte_carlo_power <- function(test_func, mu_values, n, num_simulations = 1000) {
+    power <- numeric(length(mu_values))
+    for (i in seq_along(mu_values)) {
+      mu <- mu_values[i]
+      rejections <- sum(sapply(1:num_simulations, function(x) {
+        sample <- rnorm(n, mean = mu, sd = 6)
+        test_func(sample)
+      }))
+      power[i] <- rejections / num_simulations
+    }
+    return(power)
+  }
+  
+  # Obliczanie mocy dla trzech testów
+  power_sigma <- monte_carlo_power(test_sigma_fixed, mu_values, n)
+  power_t <- monte_carlo_power(test_t_student, mu_values, n)
+  power_wilcoxon <- monte_carlo_power(test_wilcoxon, mu_values, n)
+  
+  # Wykres mocy
+  df <- data.frame(
+    mu = rep(mu_values, 3),
+    power = c(power_sigma, power_t, power_wilcoxon),
+    test = factor(rep(c("Test z", "Test t", "Test Wilcoxona"), each = length(mu_values)))
+  )
+  
+  ggplot(df, aes(x = mu, y = power, color = test)) +
+    geom_line(size = 1) +
+    labs(title = "Zadanie 2: Moc testów",
+         x = "μ",
+         y = "Moc testu") +
+    theme_minimal()
+}
+
+# Uruchomienie zadania 2
+zadanie_2()
+```
+# 
+```{r, echo=FALSE, warning = FALSE, message=FALSE}
+zadanie_3 <- function() {
+  set.seed(123)
+  
+  # Parametry
+  mu_values <- seq(0.1, 3, length.out = 100)
+  n <- 100
+  alpha <- 0.05
+  
+  # Generowanie próbek z rozkładu wykładniczego
+  exponential_sample <- function(mu, n) {
+    rexp(n, rate = 1 / mu)
+  }
+  
+  # Test dla rozkładu wykładniczego
+  test_exponential <- function(sample) {
+    mean_sample <- mean(sample)
+    z_stat <- (mean_sample - 1) / (sd(sample) / sqrt(length(sample)))
+    p_value <- 1 - pnorm(z_stat)
+    return(p_value < alpha)
+  }
+  
+  # Funkcja Monte Carlo
+  monte_carlo_power <- function(mu_values, n, num_simulations = 1000) {
+    power <- numeric(length(mu_values))
+    for (i in seq_along(mu_values)) {
+      mu <- mu_values[i]
+      rejections <- sum(sapply(1:num_simulations, function(x) {
+        sample <- exponential_sample(mu, n)
+        test_exponential(sample)
+      }))
+      power[i] <- rejections / num_simulations
+    }
+    return(power)
+  }
+  
+  # Obliczanie mocy
+  power_exponential <- monte_carlo_power(mu_values, n)
+  
+  # Wykres mocy
+  df <- data.frame(mu = mu_values, power = power_exponential)
+  
+  ggplot(df, aes(x = mu, y = power)) +
+    geom_line(color = "blue", size = 1) +
+    labs(title = "Zadanie 3: Moc testu (E(1/μ))",
+         x = "μ",
+         y = "Moc testu") +
+    theme_minimal()
+}
+
+# Uruchomienie zadania 3
+zadanie_3()
+```
+# 
+
+Wykres pudełkowy pokazuje, że mediana wynagrodzeń mężczyzn jest wyższa niż kobiet, co sugeruje, że mężczyźni zarabiają średnio więcej. Dodatkowo, wartości odstające są wyższe dla mężczyzn, co wskazuje na obecność osób osiągających bardzo wysokie wynagrodzenia. Jest to zgodne z danymi [@gus] GUS, oraz Eurostatu, natomiast przed wyciągnięciem wniosków należałoby przyjżeć się przyczyną tych różnic, ponieważ w tym przypadku mamy gołe dane i nie mamy informacji np. o ilości przepracowanych godzić.
+
+
+Wykres gęstości wskazuje na bardziej "rozciągnięty" rozkład wynagrodzeń w tej grupie, co sugeruje większą zmienność i tak jak w przypadku boxplotu - obecność ekstremalnych wartości. Wnioski z obu wykresów wskazują na potencjalne nierówności płacowe, jednak należało by podać te dane dajszej analizie w celu ustalenia tychże różnic i nierówności.
+
+# 
+
+```{r, echo = FALSE, message = FALSE, warning=FALSE}
+
+```
+Na wykresie widzimy macierz korelacji Spearmana przedstawiającą siłę i kierunek monotonicznych zależności pomiędzy zmiennymi, w tym przypadku wynagrodzeniem, latami doświadczenia i wiekiem.
+
+Korelacja Spearmana jest miarą nieparametryczną, która nie wymaga założenia normalności danych, co czyni ją odpowiednią do analizy relacji między zmiennymi w przypadku danych niesymetrycznych lub zawierających odstające obserwacje.
+
+Oczekujemy dodatnich korelacji między latami doświadczenia a wynagrodzeniem, co sugeruje, że bardziej doświadczone osoby zarabiają więcej.
+
+Korelacja między wiekiem a wynagrodzeniem również powinna być dodatnia, choć w późniejszym okresie kariery dynamika wzrostu płac może osłabnąć.
+
+Na danych widzimy, że wszyskie dane są jakoś ze sobą skorelowane, natomiast lata doświadczenia są skorelowane z wiekiem pracownika bardziej, niż z wynagrodzeniem, a wynagordzenie wraz z wiekiem jest najsłabiej skorelowane.
+
+** **
+# Wykresy
+** **
+
+Przeanalizujemy teraz, jaki wpływ na zauważone dysproporcje mają inne czynniki, takie jak wiek, wykształcenie czy doświadczenie.
+
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+```
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+```
+
+
+# 
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+
+```
+
+
+| wykształcenie | średnie wynagrodzenie kobiet | średnie wynagrodzenie mężczyzn |
+|---------------|------------------------------|--------------------------------|
+| średnie       | 30756,05                     | 39380,75                       |
+| inżynierskie  | 89165,22                     | 98971,77                       |
+| magisterskie  | 122694,54                    | 140060,59                      |
+| doktorskie    | 160266,29                    | 168711,07                      |
+
+Mimo, że każdy z wykresów wskazuje na rosnące wynagrodzenie wraz ze wzrostem wieku i lat doświadczenia to dzięki regresji możemy stwierdzić, że w większości przypadków, mężczyzna w tym samym wieku,[@dor] który przepracował tyle samo lat na danym stanowisku co kobieta zarabia więcej. To samo wynika, z analizy średnich zarobków według płci w zależności od wkształcenia przedstwionej w tabeli.
+
+# Podsumowanie
+
+Różnice w wynagrodzeniach związane z płcią, wykształceniem i doświadczeniem zawodowym stanowią skomplikowaną sieć zależności, która wymaga dokładnej analizy zarówno na poziomie makro, jak i mikroekonomicznym.[@mac2018] Współczesne badania nad tymi zjawiskami wskazują na konieczność podejmowania działań na rzecz zmniejszenia nierówności płacowych, jak dostosowanie struktury rynku pracy do rzeczywistych potrzeb pracowników. Tym nie mniej przebadane dane, jak i raport GUS, nie wskazuje na dyskryminacje ze względu na płeć, jedynie zwraca uwagę na istniejące różnice, jak i wybory poszczególnych jednostek. Przeanalizowanie danych z indi wskazuje na różnice w wynagrodzeniach kobiet i mężczyzn na stanowiskach w naszych danych, co jest różnicą między badaniami na Polskiej próbie.[@gus]
+
+
+# Bibliografia
